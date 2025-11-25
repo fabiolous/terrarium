@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+apscheduler
+adafruit-circuitpython-dht; platform_system == "Linux"
+RPi.GPIO; platform_system == "Linux"
+python-multipart
