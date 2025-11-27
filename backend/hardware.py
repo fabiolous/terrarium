@@ -6,7 +6,7 @@ import time
 logger = logging.getLogger("terrarium")
 
 # Detect if running on Raspberry Pi
-IS_PI = platform.system() == "Linux" and platform.machine().startswith("arm")
+IS_PI = platform.system() == "Linux"or platform.machine().startswith("arm")
 
 if IS_PI:
     try:
@@ -22,7 +22,7 @@ PIN_DHT_ZONE1 = 4
 PIN_DHT_ZONE2 = 17
 PIN_RELAY_HEAT1 = 27
 PIN_RELAY_HEAT2 = 22
-PIN_RELAY_LIGHT1 = 12 # Hardware PWM Pin
+PIN_RELAY_LIGHT1 = 18 # Hardware PWM Pin
 
 class HardwareManager:
     def __init__(self):
