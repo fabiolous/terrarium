@@ -36,6 +36,9 @@ class Settings(Base):
     # Lights
     light1_on_time = Column(String, default="08:00") # HH:MM
     light1_off_time = Column(String, default="20:00")
+    light_brightness_day = Column(Integer, default=100) # 0-100
+    light_brightness_night = Column(Integer, default=0) # 0-100
+    fade_duration_minutes = Column(Integer, default=30) # Minutes for sunrise/sunset fade
 
 def init_db():
     Base.metadata.create_all(bind=engine)

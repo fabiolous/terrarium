@@ -37,6 +37,10 @@ def get_db():
 
 # Background Task for Control Loop
 def control_loop():
+    global manual_mode
+    if manual_mode:
+        return
+
     db = SessionLocal()
     try:
         settings = db.query(Settings).first()
@@ -82,12 +86,55 @@ def control_loop():
             elif temp2 > target_temp2:
                 hardware.set_relay('heat2', False)
 
-        # --- 4. Control Lights ---
-        # Light follows Day/Night cycle
-        if is_day:
-            hardware.set_relay('light1', True)
-        else:
-            hardware.set_relay('light1', False)
+        # --- 4. Control Lights with Fading ---
+        # Parse light on/off times
+        from datetime import datetime, timedelta
+        try:
+            on_time = datetime.strptime(settings.light1_on_time, "%H:%M").time()
+            off_time = datetime.strptime(settings.light1_off_time, "%H:%M").time()
+            fade_duration = timedelta(minutes=settings.fade_duration_minutes)
+            
+            # Current time
+            current_time = now.time()
+            current_dt = datetime.combine(now.date(), current_time)
+            
+            # Calculate target PWM based on fading
+            target_pwm = settings.light_brightness_night
+            
+            # Sunrise: fade from night to day brightness
+            sunrise_start = datetime.combine(now.date(), on_time)
+            sunrise_end = sunrise_start + fade_duration
+            
+            # Sunset: fade from day to night brightness
+            sunset_start = datetime.combine(now.date(), off_time) - fade_duration
+            sunset_end = datetime.combine(now.date(), off_time)
+            
+            if sunrise_start <= current_dt < sunrise_end:
+                # Fading in (sunrise)
+                progress = (current_dt - sunrise_start).total_seconds() / fade_duration.total_seconds()
+                target_pwm = int(settings.light_brightness_night + 
+                               (settings.light_brightness_day - settings.light_brightness_night) * progress)
+            elif sunrise_end <= current_dt < sunset_start:
+                # Full day
+                target_pwm = settings.light_brightness_day
+            elif sunset_start <= current_dt < sunset_end:
+                # Fading out (sunset)
+                progress = (current_dt - sunset_start).total_seconds() / fade_duration.total_seconds()
+                target_pwm = int(settings.light_brightness_day - 
+                               (settings.light_brightness_day - settings.light_brightness_night) * progress)
+            else:
+                # Night
+                target_pwm = settings.light_brightness_night
+            
+            hardware.set_pwm(target_pwm)
+            
+        except Exception as e:
+            logger.error(f"Error calculating light fade: {e}")
+            # Fallback to simple day/night logic
+            if is_day:
+                hardware.set_pwm(settings.light_brightness_day)
+            else:
+                hardware.set_pwm(settings.light_brightness_night)
 
     except Exception as e:
         logger.error(f"Error in control loop: {e}")
@@ -131,6 +178,40 @@ def update_settings(new_settings: dict, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(settings)
     return settings
+
+# --- Manual Mode State ---
+manual_mode = False
+
+@app.post("/api/manual/mode/{enabled}")
+def set_manual_mode(enabled: bool):
+    global manual_mode
+    manual_mode = enabled
+    logger.info(f"Manual mode set to {enabled}")
+    return {"manual_mode": manual_mode}
+
+@app.get("/api/manual/mode")
+def get_manual_mode():
+    return {"manual_mode": manual_mode}
+
+@app.post("/api/manual/relay/{device}/{state}")
+def manual_relay(device: str, state: bool):
+    if not manual_mode:
+        raise HTTPException(status_code=400, detail="Manual mode is not enabled")
+    if device not in ['heat1', 'heat2']:
+        raise HTTPException(status_code=400, detail="Invalid device")
+    
+    hardware.set_relay(device, state)
+    return {"device": device, "state": state}
+
+@app.post("/api/manual/pwm/{value}")
+def manual_pwm(value: int):
+    if not manual_mode:
+        raise HTTPException(status_code=400, detail="Manual mode is not enabled")
+    if not (0 <= value <= 100):
+        raise HTTPException(status_code=400, detail="Value must be 0-100")
+        
+    hardware.set_pwm(value)
+    return {"pwm": value}
 
 # Mount static files if directory exists (for production/single-server mode)
 # Must be at the end to avoid shadowing API routes

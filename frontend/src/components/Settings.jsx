@@ -64,6 +64,25 @@ export default function Settings() {
                 <InputGroup label="Day Start Hour (0-23)" name="day_start_hour" value={settings.day_start_hour} onChange={handleChange} type="number" />
                 <InputGroup label="Night Start Hour (0-23)" name="night_start_hour" value={settings.night_start_hour} onChange={handleChange} type="number" />
             </Section>
+
+            <Section title="Lighting Schedule & Brightness">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h4 className="text-sm font-medium text-slate-400 mb-2">Main Light</h4>
+                        <InputGroup label="On Time" name="light1_on_time" value={settings.light1_on_time} onChange={handleChange} type="time" />
+                        <InputGroup label="Off Time" name="light1_off_time" value={settings.light1_off_time} onChange={handleChange} type="time" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-medium text-slate-400 mb-2">Brightness (0-100%)</h4>
+                        <InputGroup label="Day Brightness" name="light_brightness_day" value={settings.light_brightness_day} onChange={handleChange} type="number" min="0" max="100" />
+                        <InputGroup label="Night Brightness" name="light_brightness_night" value={settings.light_brightness_night} onChange={handleChange} type="number" min="0" max="100" />
+                    </div>
+                </div>
+                <div className="mt-4">
+                    <InputGroup label="Fade Duration (minutes)" name="fade_duration_minutes" value={settings.fade_duration_minutes} onChange={handleChange} type="number" min="1" max="180" />
+                    <p className="text-xs text-slate-500 mt-1">Time to gradually fade lights on/off (sunrise/sunset simulation)</p>
+                </div>
+            </Section>
         </div>
     );
 }
@@ -79,7 +98,7 @@ function Section({ title, children }) {
     )
 }
 
-function InputGroup({ label, name, value, onChange, type = "text", step }) {
+function InputGroup({ label, name, value, onChange, type = "text", step, min, max }) {
     return (
         <div className="flex flex-col">
             <label className="text-sm text-slate-400 mb-1">{label}</label>
@@ -89,6 +108,8 @@ function InputGroup({ label, name, value, onChange, type = "text", step }) {
                 value={value}
                 onChange={onChange}
                 step={step}
+                min={min}
+                max={max}
                 className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             />
         </div>

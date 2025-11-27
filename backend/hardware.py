@@ -22,7 +22,7 @@ PIN_DHT_ZONE1 = 4
 PIN_DHT_ZONE2 = 17
 PIN_RELAY_HEAT1 = 27
 PIN_RELAY_HEAT2 = 22
-PIN_RELAY_LIGHT1 = 23
+PIN_RELAY_LIGHT1 = 18 # Hardware PWM Pin
 
 class HardwareManager:
     def __init__(self):
@@ -30,7 +30,8 @@ class HardwareManager:
         self.state = {
             "heat1": False,
             "heat2": False,
-            "light1": False
+            "light1": False,
+            "light_pwm": 0
         }
         
         # Mock data simulation
@@ -45,21 +46,22 @@ class HardwareManager:
             # Initialize off
             self._write_gpio(PIN_RELAY_HEAT1, False)
             self._write_gpio(PIN_RELAY_HEAT2, False)
-            self._write_gpio(PIN_RELAY_LIGHT1, False)
+            
+            # Initialize PWM for Light
+            self.pwm_light = GPIO.PWM(PIN_RELAY_LIGHT1, 1000) # 1kHz frequency
+            self.pwm_light.start(0)
+            
             logger.info("Hardware initialized in PI mode")
         else:
             logger.info("Hardware initialized in MOCK mode")
 
     def _write_gpio(self, pin, value):
         if not self.mock_mode:
-            # Relay logic: usually Low is ON for many relay modules, but let's assume High is ON for now
-            # or make it configurable. Assuming High = ON (Active High).
-            # If Active Low, invert value.
             GPIO.output(pin, GPIO.HIGH if value else GPIO.LOW)
 
     def set_relay(self, device, state: bool):
         """
-        device: 'heat1', 'heat2', 'light1'
+        device: 'heat1', 'heat2'
         state: True (ON) or False (OFF)
         """
         self.state[device] = state
@@ -67,7 +69,6 @@ class HardwareManager:
         pin = None
         if device == 'heat1': pin = PIN_RELAY_HEAT1
         elif device == 'heat2': pin = PIN_RELAY_HEAT2
-        elif device == 'light1': pin = PIN_RELAY_LIGHT1
         
         if pin:
             self._write_gpio(pin, state)
@@ -80,6 +81,18 @@ class HardwareManager:
                         self.mock_temps[zone] += 0.5
                     else:
                         self.mock_temps[zone] -= 0.2
+
+    def set_pwm(self, duty_cycle: int):
+        """
+        Set PWM duty cycle for Light (0-100)
+        """
+        self.state['light1'] = duty_cycle > 0 # For UI status
+        self.state['light_pwm'] = duty_cycle
+        
+        if not self.mock_mode:
+            self.pwm_light.ChangeDutyCycle(duty_cycle)
+        else:
+            logger.info(f"[MOCK] Set Light PWM to {duty_cycle}%")
 
     def read_dht(self, zone):
         """
