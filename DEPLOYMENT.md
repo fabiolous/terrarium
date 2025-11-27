@@ -64,7 +64,11 @@ This section acts as a bridge. Power comes IN from your supply, goes through the
 4. **Frontend Setup**
    ```bash
    cd ~/terrarium/frontend
-   npm install
+   # Fix ownership (replace 'pi' if your username is different)
+   sudo chown -R pi:pi node_modules
+   # Make binaries executable
+   chmod -R +x node_modules/.bin
+   # Try building again
    npm run build
    ```
 

@@ -22,7 +22,7 @@ PIN_DHT_ZONE1 = 4
 PIN_DHT_ZONE2 = 17
 PIN_RELAY_HEAT1 = 27
 PIN_RELAY_HEAT2 = 22
-PIN_RELAY_LIGHT1 = 18 # Hardware PWM Pin
+PIN_RELAY_LIGHT1 = 12 # Hardware PWM Pin
 
 class HardwareManager:
     def __init__(self):
